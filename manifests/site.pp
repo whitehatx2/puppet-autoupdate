@@ -10,8 +10,9 @@ $virtualMachineName = "KenyaVM_13.2.2-2"                     # we will start the
 File["/opt/KenyaEMR"] ->
 Exec["download"] ->
 Exec["disableoldVM"] ->
-#Exec["disableCurrentVM"] ->
+Exec["renameOldVM"] ->
 Exec["vboxImport"] ->
+Exec["modifyVM"] ->
 Exec["startVM"]
 
 file { "/opt/KenyaEMR" :
@@ -31,17 +32,25 @@ exec { "download":
 # a trick is used here: ;echo "" is used to run a successful command, expecting the delete to fail
 
 exec { "disableoldVM":
-	command => "/usr/bin/vboxmanage unregistervm \"${oldVMName2Disable}\" --delete || echo \"\"",
+	command => "/usr/bin/vboxmanage controlvm \"${oldVMName2Disable}\" poweroff || echo \"\"",
      }
 
+exec {
+	"renameOldVM":
+	command => "/usr/bin/vboxmanage modifyvm  ${oldVMName2Disable} --name Retired_${oldVMName2Disable}",
+     }
 #exec { "disableCurrentVM":
-#	command => "/usr/bin/vboxmanage unregistervm \"${oldVMName2Disable}\" --delete || echo \"\"",
 #     }
 
 exec { "vboxImport":
 	command => "/usr/bin/vboxmanage import /opt/KenyaEMR/${ovfImageName} --vsys 0 --vmname ${virtualMachineName}",
      }
 
+exec {
+	"modifyVM":
+	command => "/usr/bin/vboxmanage modifyvm  ${virtualMachineName} --nic1 bridged --bridgeadapter1 eth0 --vrde on",
+     }
+
 exec { "startVM":
-	command => "/usr/bin/vboxmanage startvm ${virtualMachineName}",
+	command => "/usr/bin/vboxmanage startvm ${virtualMachineName} --type headless",
      }
